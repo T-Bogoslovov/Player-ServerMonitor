@@ -1,0 +1,3 @@
+export const API_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbiI6IjRlNzk1ZjlmZjVkMzVmMGIiLCJpYXQiOjE3MzU0OTY4NzIsIm5iZiI6MTczNTQ5Njg3MiwiaXNzIjoiaHR0cHM6Ly93d3cuYmF0dGxlbWV0cmljcy5jb20iLCJzdWIiOiJ1cm46dXNlcjo3OTI3NTgifQ.TM76wOCW-rm2BmcOQW8T_NfZSNTsql2Rq6NtVVYefY4';
+export const SERVER_ID = '20634683';
+export const API_BASE_URL = 'https://api.battlemetrics.com';

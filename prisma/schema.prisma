@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Player {
+  id           Int               @id @default(autoincrement())
+  bmId         String            @unique
+  currentName  String
+  serverId     String?
+  isActive     Boolean           @default(true)
+  snapshots    PlayerSnapshot[]
+  nameHistory  NameHistory[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@map("players")
+}
+
+model PlayerSnapshot {
+  id           Int       @id @default(autoincrement())
+  player       Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId     Int
+  timestamp    DateTime  @default(now())
+  isOnline     Boolean
+  sessionStart DateTime?
+  sessionEnd   DateTime?
+  durationSec  Int?
+  kills        Int?
+  deaths       Int?
+  resources    String?   // JSON string
+  firstTime    Boolean   @default(false)
+  private      Boolean   @default(false)
+  
+  @@index([playerId, timestamp])
+  @@map("player_snapshots")
+}
+
+model NameHistory {
+  id           Int       @id @default(autoincrement())
+  player       Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId     Int
+  name         String
+  changedAt    DateTime  @default(now())
+  
+  @@map("name_history")
+}
+
+model PollingLog {
+  id           Int       @id @default(autoincrement())
+  timestamp    DateTime  @default(now())
+  playersCount Int
+  successCount Int
+  errorCount   Int
+  duration     Int       // milliseconds
+  errors       String?   // JSON string of errors
+  
+  @@map("polling_logs")
+}

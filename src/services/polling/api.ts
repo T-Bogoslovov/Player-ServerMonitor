@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { DatabaseService } from './database';
 import { PollingService } from './pollingService';
@@ -13,18 +13,18 @@ app.use(cors());
 app.use(express.json());
 
 // Middleware for error handling
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   logger.error('API Error', err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Get all tracked players
-app.get('/api/players', async (req, res) => {
+app.get('/api/players', async (_req: Request, res: Response) => {
   try {
     const players = await db.getActivePlayers();
     res.json(players);
@@ -35,7 +35,7 @@ app.get('/api/players', async (req, res) => {
 });
 
 // Get player snapshots
-app.get('/api/players/:id/snapshots', async (req, res) => {
+app.get('/api/players/:id/snapshots', async (req: Request, res: Response) => {
   try {
     const playerId = parseInt(req.params.id);
     const hours = parseInt(req.query.hours as string) || 24;
@@ -49,7 +49,7 @@ app.get('/api/players/:id/snapshots', async (req, res) => {
 });
 
 // Add player by name
-app.post('/api/players', async (req, res) => {
+app.post('/api/players', async (req: Request, res: Response) => {
   try {
     const { name } = req.body;
     
@@ -66,7 +66,7 @@ app.post('/api/players', async (req, res) => {
 });
 
 // Get polling statistics
-app.get('/api/polling/stats', async (req, res) => {
+app.get('/api/polling/stats', async (req: Request, res: Response) => {
   try {
     const hours = parseInt(req.query.hours as string) || 24;
     const stats = await pollingService.getPollingStats(hours);
@@ -78,7 +78,7 @@ app.get('/api/polling/stats', async (req, res) => {
 });
 
 // Trigger manual poll
-app.post('/api/polling/trigger', async (req, res) => {
+app.post('/api/polling/trigger', async (_req: Request, res: Response) => {
   try {
     await pollingService.pollAllPlayers();
     res.json({ success: true, message: 'Polling cycle triggered successfully' });

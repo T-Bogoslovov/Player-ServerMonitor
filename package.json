@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "polling-service": "node --loader tsx src/services/polling/index.ts",
+    "polling-service": "node --import tsx/esm src/services/polling/index.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev"

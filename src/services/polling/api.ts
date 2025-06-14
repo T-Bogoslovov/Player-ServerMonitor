@@ -89,14 +89,15 @@ app.post('/api/polling/trigger', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || '0.0.0.0';
 
 export const startApiServer = async () => {
   await db.connect();
   await pollingService.initialize();
   
-  app.listen(PORT, () => {
-    logger.info(`API server running on port ${PORT}`);
+  const server = app.listen(PORT, HOST, () => {
+    logger.info(`API server running on http://${HOST}:${PORT}`);
   });
   
-  return app;
+  return server;
 };

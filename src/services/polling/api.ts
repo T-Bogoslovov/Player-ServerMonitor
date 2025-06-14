@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { DatabaseService } from './database';
 import { PollingService } from './pollingService';
 import { logger } from './logger';
@@ -7,6 +8,8 @@ const app = express();
 const db = new DatabaseService();
 const pollingService = new PollingService();
 
+// Enable CORS for all routes
+app.use(cors());
 app.use(express.json());
 
 // Middleware for error handling

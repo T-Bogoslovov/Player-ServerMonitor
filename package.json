@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --import tsx --test tests/playerSorter.test.ts",
     "preview": "vite preview",
     "polling-service": "tsx src/services/polling/index.ts",
     "db:generate": "prisma generate",

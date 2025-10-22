@@ -18,7 +18,6 @@ export interface Player {
   private?: boolean;
   firstTime?: boolean;
   createdAt?: string;
-  sessionStart?: string;
   identifiers: PlayerIdentifier[];
   sessions: PlayerSession[];
 }

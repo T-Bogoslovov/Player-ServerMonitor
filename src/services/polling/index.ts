@@ -3,6 +3,7 @@
 import { PollingScheduler } from './scheduler';
 import { config, validateConfig } from './config';
 import { logger } from './logger';
+import { startApiServer } from './api';
 
 async function main() {
   try {
@@ -16,11 +17,15 @@ async function main() {
 
     const scheduler = new PollingScheduler();
     
+    // Start the API server
+    const apiServer = await startApiServer();
+    
     // Handle graceful shutdown
     const shutdown = async (signal: string) => {
       logger.info(`Received ${signal}, shutting down gracefully...`);
       try {
         await scheduler.stop();
+        apiServer.close();
         process.exit(0);
       } catch (error) {
         logger.error('Error during shutdown', error);

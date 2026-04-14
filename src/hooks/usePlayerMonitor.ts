@@ -3,14 +3,19 @@ import { fetchServerInfo } from '../services/battlemetrics';
 import { generateId } from '../utils/idGenerator';
 import { logger } from '../utils/logger';
 import { storage } from '../utils/storage';
+import { DEFAULT_SERVER_ID } from '../services/api/constants';
 import type { Player, ServerResponse, ServerInfo, ServerEvent } from '../types/battlemetrics';
 
 const STORAGE_KEY = 'monitored_players';
+const SERVER_ID_KEY = 'active_server_id';
 const REFRESH_INTERVAL = 60000; // 1 minute
 
 export const usePlayerMonitor = () => {
+  const [serverId, setServerId] = useState<string>(() =>
+    storage.get(SERVER_ID_KEY, DEFAULT_SERVER_ID)
+  );
   const [server, setServer] = useState<ServerInfo | null>(null);
-  const [players, setPlayers] = useState<Player[]>(() => 
+  const [players, setPlayers] = useState<Player[]>(() =>
     storage.get(STORAGE_KEY, [])
   );
   const [serverPlayers, setServerPlayers] = useState<Player[]>([]);
@@ -20,7 +25,7 @@ export const usePlayerMonitor = () => {
   const [refreshingPlayers, setRefreshingPlayers] = useState<string[]>([]);
   const [lastApiResponse, setLastApiResponse] = useState<ServerResponse | null>(null);
 
-  const updatePlayerStatuses = useCallback(async (playerIds?: string[]) => {
+  const updatePlayerStatuses = useCallback(async (playerIds?: string[], overrideServerId?: string) => {
     try {
       if (playerIds) {
         setRefreshingPlayers(prev => [...prev, ...playerIds]);
@@ -28,7 +33,8 @@ export const usePlayerMonitor = () => {
         setLoading(true);
       }
 
-      const response = await fetchServerInfo();
+      const activeServerId = overrideServerId ?? storage.get(SERVER_ID_KEY, DEFAULT_SERVER_ID);
+      const response = await fetchServerInfo(activeServerId);
       setLastApiResponse(response);
       setServer(response.server);
       setServerPlayers(response.players);
@@ -47,18 +53,15 @@ export const usePlayerMonitor = () => {
       setEvents(prev => [...response.events, ...prev].slice(0, 100));
 
       const serverPlayerMap = new Map(
-        response.players.map(player => [
-          player.name.toLowerCase(),
-          player
-        ])
+        response.players.map(player => [player.battlemetricsId, player])
       );
 
-      setPlayers(current => 
+      setPlayers(current =>
         current.map(player => {
-          const serverPlayer = serverPlayerMap.get(player.name.toLowerCase());
+          const serverPlayer = serverPlayerMap.get(player.battlemetricsId);
           const playerName = player.name.toLowerCase();
           const sessions = [...(player.sessions || [])];
-          
+
           if (!serverPlayer) {
             // Player is offline - use the most recent removePlayer event timestamp
             const lastSeen = lastSeenMap.get(playerName);
@@ -90,7 +93,8 @@ export const usePlayerMonitor = () => {
               endTime: undefined
             });
           }
-          
+
+          // name: serverPlayer.name intentionally overwrites stored name (handles renames)
           return {
             ...player,
             ...serverPlayer,
@@ -108,7 +112,7 @@ export const usePlayerMonitor = () => {
       logger.error('Error updating player statuses', err);
     } finally {
       if (playerIds) {
-        setRefreshingPlayers(prev => 
+        setRefreshingPlayers(prev =>
           prev.filter(id => !playerIds.includes(id))
         );
       } else {
@@ -134,13 +138,20 @@ export const usePlayerMonitor = () => {
     }
 
     try {
-      const response = await fetchServerInfo();
+      const activeServerId = storage.get(SERVER_ID_KEY, DEFAULT_SERVER_ID);
+      const response = await fetchServerInfo(activeServerId);
       const serverPlayer = response.players.find(
         p => p.name.toLowerCase() === normalizedName.toLowerCase()
       );
 
       if (!serverPlayer) {
         setError('Player not found on server');
+        return;
+      }
+
+      const alreadyTracked = players.find(p => p.battlemetricsId === serverPlayer.battlemetricsId);
+      if (alreadyTracked) {
+        setError('Player is already being monitored');
         return;
       }
 
@@ -162,6 +173,13 @@ export const usePlayerMonitor = () => {
       logger.error('Error adding player', err);
     }
   }, [players]);
+
+  const changeServer = useCallback((newId: string) => {
+    storage.set(SERVER_ID_KEY, newId);
+    setServerId(newId);
+    setPlayers([]);
+    updatePlayerStatuses(undefined, newId);
+  }, [updatePlayerStatuses]);
 
   const removePlayer = useCallback((id: string) => {
     setPlayers(prev => prev.filter(player => player.id !== id));
@@ -200,6 +218,7 @@ export const usePlayerMonitor = () => {
 
   return {
     server,
+    serverId,
     players,
     serverPlayers,
     events,
@@ -209,6 +228,7 @@ export const usePlayerMonitor = () => {
     removePlayer,
     refreshPlayer,
     clearPlayerSession,
+    changeServer,
     refreshingPlayers,
     lastApiResponse
   };

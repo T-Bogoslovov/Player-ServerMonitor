@@ -58,6 +58,16 @@ export interface ServerEvent {
   name?: string;
 }
 
+export interface ServerSearchResult {
+  id: string;
+  name: string;
+  players: number;
+  maxPlayers: number;
+  status: 'online' | 'offline';
+  ip: string;
+  port: number;
+}
+
 export interface ServerResponse {
   server: ServerInfo;
   players: Player[];

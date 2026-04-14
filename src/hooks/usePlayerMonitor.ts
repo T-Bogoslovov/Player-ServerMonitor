@@ -39,32 +39,42 @@ export const usePlayerMonitor = () => {
       setServer(response.server);
       setServerPlayers(response.players);
 
-      // Get the most recent removePlayer event for each player
-      const lastSeenMap = new Map<string, string>();
-      response.events.forEach(event => {
-        if (event.type === 'removePlayer' && event.name) {
-          const playerName = event.name.toLowerCase();
-          if (!lastSeenMap.has(playerName)) {
-            lastSeenMap.set(playerName, event.timestamp);
-          }
-        }
-      });
-
       setEvents(prev => [...response.events, ...prev].slice(0, 100));
 
       const serverPlayerMap = new Map(
         response.players.map(player => [player.battlemetricsId, player])
       );
 
-      setPlayers(current =>
-        current.map(player => {
+      // Capture events array for use inside the functional updater below.
+      const recentEvents = response.events;
+
+      setPlayers(current => {
+        // Build name → battlemetricsId from both tracked players (stored names) and the
+        // live server roster (current names). Online players' current names take precedence,
+        // which handles the case where a player renamed between sessions.
+        const nameToIdMap = new Map<string, string>(
+          current.map(p => [p.name.toLowerCase(), p.battlemetricsId])
+        );
+        response.players.forEach(p => nameToIdMap.set(p.name.toLowerCase(), p.battlemetricsId));
+
+        // Get the most recent removePlayer event timestamp keyed by battlemetricsId.
+        const lastSeenMap = new Map<string, string>();
+        recentEvents.forEach(event => {
+          if (event.type === 'removePlayer' && event.name) {
+            const bmId = nameToIdMap.get(event.name.toLowerCase());
+            if (bmId && !lastSeenMap.has(bmId)) {
+              lastSeenMap.set(bmId, event.timestamp);
+            }
+          }
+        });
+
+        return current.map(player => {
           const serverPlayer = serverPlayerMap.get(player.battlemetricsId);
-          const playerName = player.name.toLowerCase();
           const sessions = [...(player.sessions || [])];
 
           if (!serverPlayer) {
             // Player is offline - use the most recent removePlayer event timestamp
-            const lastSeen = lastSeenMap.get(playerName);
+            const lastSeen = lastSeenMap.get(player.battlemetricsId);
             if (lastSeen && sessions.length > 0 && !sessions[0].endTime) {
               // Update the last session's end time instead of creating a new one
               sessions[0].endTime = lastSeen;
@@ -101,8 +111,8 @@ export const usePlayerMonitor = () => {
             status: 'online',
             sessions
           };
-        })
-      );
+        });
+      });
 
       setError(null);
     } catch (err) {
@@ -174,12 +184,24 @@ export const usePlayerMonitor = () => {
     }
   }, [players]);
 
-  const changeServer = useCallback((newId: string) => {
+  const changeServer = useCallback(async (newId: string) => {
     storage.set(SERVER_ID_KEY, newId);
     setServerId(newId);
-    setPlayers([]);
-    updatePlayerStatuses(undefined, newId);
-  }, [updatePlayerStatuses]);
+    // Clear players only after the fetch succeeds so a network failure does not
+    // permanently erase the stored list (the persistence useEffect writes on every change).
+    try {
+      const response = await fetchServerInfo(newId);
+      setPlayers([]);
+      setLastApiResponse(response);
+      setServer(response.server);
+      setServerPlayers(response.players);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect to server';
+      setError(errorMessage);
+      logger.error('Error switching server', err);
+    }
+  }, []);
 
   const removePlayer = useCallback((id: string) => {
     setPlayers(prev => prev.filter(player => player.id !== id));

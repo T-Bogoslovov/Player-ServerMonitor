@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserRound, UserMinus, RefreshCw } from 'lucide-react';
+import { UserRound, UserMinus, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Player } from '../types/battlemetrics';
 import { PlayerStatusBadge } from './PlayerStatusBadge';
 import { PlayerDatesRow } from './PlayerDatesRow';
@@ -21,6 +21,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   onClearSession,
   isRefreshing
 }) => {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
   return (
     <div
       className={`bg-white rounded-lg shadow-md transition-all hover:shadow-lg border-l-4 ${
@@ -30,12 +32,26 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       }`}
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
+      <div className={`p-4 ${isExpanded ? 'border-b border-gray-100' : ''}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsExpanded(prev => !prev)}
+              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              title={isExpanded ? 'Collapse' : 'Expand'}
+            >
+              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </button>
             <UserRound className="w-6 h-6 text-gray-600" />
             <div>
-              <h3 className="font-semibold text-gray-800">{player.name}</h3>
+              <a
+                href={`https://www.battlemetrics.com/players/${player.battlemetricsId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-gray-800 hover:text-blue-600 transition-colors"
+              >
+                {player.name}
+              </a>
               <PlayerStatusBadge status={player.status} />
             </div>
           </div>
@@ -60,14 +76,16 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-4 bg-gray-50">
-        <PlayerDatesRow player={player} />
-        <PlayerIdentifiers identifiers={player.identifiers} />
-        <PlayerSessionHistory 
-          player={player} 
-          onClearSession={(sessionId) => onClearSession(player.id, sessionId)}
-        />
-      </div>
+      {isExpanded && (
+        <div className="p-4 space-y-4 bg-gray-50">
+          <PlayerDatesRow player={player} />
+          <PlayerIdentifiers identifiers={player.identifiers} />
+          <PlayerSessionHistory
+            player={player}
+            onClearSession={(sessionId) => onClearSession(player.id, sessionId)}
+          />
+        </div>
+      )}
     </div>
   );
 };

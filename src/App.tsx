@@ -1,25 +1,29 @@
-import React from 'react';
-import { Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Settings } from 'lucide-react';
 import { PlayerList } from './components/PlayerList';
 import { AddPlayerForm } from './components/AddPlayerForm';
 import { ApiDebug } from './components/ApiDebug';
 import { ServerHeroCard } from './components/server/ServerHeroCard';
 import { OnlinePlayersList } from './components/server/OnlinePlayersList';
 import { ServerEventsList } from './components/events/ServerEventsList';
+import { ChangeServerModal } from './components/server/ChangeServerModal';
 import { usePlayerMonitor } from './hooks/usePlayerMonitor';
 
 const App: React.FC = () => {
-  const { 
+  const [isChangeServerModalOpen, setIsChangeServerModalOpen] = useState(false);
+
+  const {
     server,
     players,
     serverPlayers,
     events,
-    loading, 
-    error, 
-    addPlayer, 
+    loading,
+    error,
+    addPlayer,
     removePlayer,
     refreshPlayer,
     clearPlayerSession,
+    changeServer,
     refreshingPlayers,
     lastApiResponse
   } = usePlayerMonitor();
@@ -39,6 +43,17 @@ const App: React.FC = () => {
           {/* Server Hero Card */}
           {server && <ServerHeroCard server={server} />}
 
+          {/* Change Server button */}
+          <div className="mt-3 mb-6">
+            <button
+              onClick={() => setIsChangeServerModalOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Change Server
+            </button>
+          </div>
+
           {/* Following Players */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Following Players</h2>
@@ -54,7 +69,7 @@ const App: React.FC = () => {
               {loading && players.length === 0 ? (
                 <div className="text-center text-gray-500">Loading...</div>
               ) : (
-                <PlayerList 
+                <PlayerList
                   players={players}
                   onRemovePlayer={removePlayer}
                   onRefreshPlayer={refreshPlayer}
@@ -66,7 +81,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Online Players */}
-          <OnlinePlayersList 
+          <OnlinePlayersList
             players={players}
             serverPlayers={serverPlayers}
           />
@@ -76,11 +91,20 @@ const App: React.FC = () => {
         <ServerEventsList events={events} />
 
         {/* API Debug */}
-        <ApiDebug 
+        <ApiDebug
           apiResponse={lastApiResponse}
           error={error}
         />
       </main>
+
+      <ChangeServerModal
+        isOpen={isChangeServerModalOpen}
+        onClose={() => setIsChangeServerModalOpen(false)}
+        onSelect={(id) => {
+          changeServer(id);
+          setIsChangeServerModalOpen(false);
+        }}
+      />
     </div>
   );
 };
